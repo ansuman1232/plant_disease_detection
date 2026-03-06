@@ -1,0 +1,280 @@
+🔹 1️⃣ Import Section
+from flask import Flask, request, jsonify
+
+✅ Imports from Flask
+
+Flask → creates backend server
+
+request → receives data from frontend
+
+jsonify → sends JSON response back
+
+from flask_cors import CORS
+
+✅ Enables CORS (Cross-Origin Resource Sharing).
+Allows React frontend (port 3000) to communicate with backend (port 5000).
+
+import tensorflow as tf
+
+✅ Imports TensorFlow
+Used to:
+
+Build model
+
+Load weights
+
+Run predictions
+
+import numpy as np
+
+✅ Used for:
+
+Array manipulation
+
+Finding highest probability index (argmax)
+
+from PIL import Image
+
+✅ PIL (Python Imaging Library)
+Used to:
+
+Open uploaded image
+
+Resize it
+
+Convert to RGB
+
+import io
+
+✅ Used to read image bytes from uploaded file.
+
+🔹 2️⃣ Create Flask App
+app = Flask(__name__)
+
+Creates your backend server application.
+
+CORS(app)
+
+Enables cross-origin requests.
+
+Without this → browser blocks API calls.
+
+🔹 3️⃣ Model Creation Function
+def create_model():
+
+Defines function to build model architecture.
+
+Base Model (Feature Extractor)
+    base_model = tf.keras.applications.ResNet50(
+        weights='imagenet',
+        include_top=False,
+        input_shape=(224, 224, 3)
+    )
+
+Uses ResNet50
+
+weights='imagenet' → pretrained on ImageNet
+
+include_top=False → removes original 1000-class layer
+
+input_shape=(224,224,3) → expects RGB image
+
+Output shape:
+
+(None, 7, 7, 2048)
+
+None = batch size.
+
+Add Custom Layers
+    model = tf.keras.Sequential([
+        base_model,
+
+Sequential model → layers stacked one after another.
+
+        tf.keras.layers.GlobalAveragePooling2D(),
+
+Converts:
+
+(7,7,2048)
+
+into:
+
+(2048)
+
+It averages each feature map.
+
+        tf.keras.layers.BatchNormalization(),
+
+Stabilizes activations.
+Improves performance.
+
+        tf.keras.layers.Dense(256, activation='relu'),
+
+Fully connected layer.
+256 neurons learn disease-specific patterns.
+
+        tf.keras.layers.Dropout(0.5),
+
+Randomly disables 50% neurons during training.
+Prevents overfitting.
+
+        tf.keras.layers.Dense(29, activation='softmax')
+
+Final output layer.
+
+29 neurons → 29 diseases
+
+Softmax → outputs probabilities
+
+    ])
+    return model
+
+Returns completed model.
+
+🔹 4️⃣ Create Model & Load Weights
+print("🔄 Creating model architecture...")
+model = create_model()
+
+Builds model structure.
+
+print("📥 Loading weights only...")
+model.load_weights("model/plant_weights.weights.h5")
+
+Loads trained weights from file.
+
+Important:
+You are NOT training here.
+Only loading learned parameters.
+
+print("✅ Weights loaded successfully!")
+
+Model is ready for prediction.
+
+🔹 5️⃣ Class Names
+CLASS_NAMES = [
+    'AppleBlackRot', ...
+]
+
+List of 29 classes.
+
+Important:
+
+Index in this list = output neuron index.
+
+Example:
+If prediction index = 3
+Then CLASS_NAMES[3] → AppleScab
+
+🔹 6️⃣ Create Prediction API Route
+@app.route('/predict', methods=['POST'])
+
+Creates endpoint:
+
+http://localhost:5000/predict
+
+Accepts POST requests.
+
+def predict():
+
+Function runs when frontend calls /predict.
+
+🔹 7️⃣ Check Image Upload
+    if 'image' not in request.files:
+        return jsonify({'error': 'No image uploaded'}), 400
+
+If image missing:
+Return error message with status code 400.
+
+🔹 8️⃣ Read Image
+    file = request.files['image']
+
+Gets uploaded file.
+
+    image = Image.open(io.BytesIO(file.read())).convert('RGB')
+
+Reads file bytes
+
+Converts to image
+
+Converts to RGB
+
+    image = image.resize((224, 224))
+
+Resize because ResNet requires 224×224.
+
+🔹 9️⃣ Preprocess Image
+    image_array = tf.keras.applications.resnet50.preprocess_input(
+        np.array(image, dtype=np.float32)[np.newaxis, ...]
+    )
+
+Steps happening:
+
+Convert image to NumPy array
+
+Convert to float32
+
+Add batch dimension → (1,224,224,3)
+
+Apply ResNet50 preprocessing
+
+Why?
+
+Because model was trained on ImageNet with specific normalization.
+
+🔹 🔟 Make Prediction
+    predictions = model.predict(image_array, verbose=0)[0]
+
+Model outputs array of 29 probabilities.
+
+Example:
+
+[0.01, 0.90, 0.02, ...]
+    predicted_idx = np.argmax(predictions)
+
+Gets index of highest probability.
+
+    confidence = float(predictions[predicted_idx])
+
+Gets probability value.
+Converted to float for JSON.
+
+    predicted_class = CLASS_NAMES[predicted_idx]
+
+Gets disease name.
+
+    parts = predicted_class.split('_', 1)
+    plant = parts[0] if len(parts) > 1 else 'Unknown'
+
+Extracts plant name from disease string.
+
+🔹 1️⃣1️⃣ Return JSON Response
+    return jsonify({
+        'disease': predicted_class,
+        'confidence': confidence,
+        'plantType': plant,
+        'affectedArea': 'leaves',
+        'reasoning': f'Detected {predicted_class} ({confidence:.1%} confidence)'
+    })
+
+Sends JSON back to frontend.
+
+Frontend displays:
+
+Disease
+
+Confidence
+
+Plant Type
+
+🔹 1️⃣2️⃣ Run Server
+if __name__ == '__main__':
+
+Ensures server runs only when file executed directly.
+
+    app.run(debug=True, host='0.0.0.0', port=5000)
+
+debug=True → auto reload
+
+host='0.0.0.0' → accessible from network
+
+port=5000 → runs on port 5000

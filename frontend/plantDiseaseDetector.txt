@@ -1,0 +1,288 @@
+// Import React and required hooks
+import React, { useState, useRef } from 'react';
+
+// Import icons from lucide-react for UI decoration
+import { Upload, Loader2, Leaf, AlertTriangle, Sun, Bug } from 'lucide-react';
+
+// Main functional component
+const PlantDiseaseDetector = () => {
+
+  // -------------------- STATE VARIABLES --------------------
+
+  // Stores the uploaded image file (actual file object)
+  const [selectedImage, setSelectedImage] = useState(null);
+
+  // Stores base64 preview of image (used for displaying preview)
+  const [imagePreview, setImagePreview] = useState(null);
+
+  // Controls loading state while backend is analyzing image
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+
+  // Stores prediction result returned from Flask backend
+  const [diagnosis, setDiagnosis] = useState(null);
+
+  // Stores error messages (e.g., backend not running)
+  const [error, setError] = useState(null);
+
+  // Reference to hidden file input element
+  const fileInputRef = useRef(null);
+
+
+
+  // -------------------- ANALYZE IMAGE FUNCTION --------------------
+
+  // This function sends the selected image to Flask backend
+  const analyzeImage = async () => {
+
+    // If no image selected, stop execution
+    if (!selectedImage) return;
+
+    // Start loading state
+    setIsAnalyzing(true);
+
+    // Clear previous error
+    setError(null);
+
+    try {
+
+      // Create FormData object to send file to backend
+      const formData = new FormData();
+
+      // Append image file with key name "image"
+      // Flask backend expects request.files['image']
+      formData.append('image', selectedImage);
+
+      // Send POST request to Flask backend
+      const response = await fetch('http://localhost:5000/predict', {
+        method: 'POST',
+        body: formData
+      });
+
+      // If backend returns error status
+      if (!response.ok) {
+        throw new Error(`Backend error: ${response.status}`);
+      }
+
+      // Convert backend response into JSON
+      const result = await response.json();
+
+      // Replace underscores in disease name (if present)
+      // Example: Tomato_Late_Blight → Tomato Late Blight
+      let diseaseInfoKey = result.disease;
+      if (result.disease.includes('_')) {
+        diseaseInfoKey = result.disease.replace(/_/g, ' ');
+      }
+
+      // Store diagnosis data in state
+      setDiagnosis({
+        disease: result.disease,
+        confidence: result.confidence,
+        plantType: result.plantType || 'Unknown',
+        affectedArea: result.affectedArea || 'leaves',
+        reasoning: result.reasoning,
+
+        // Placeholder arrays for future expansion
+        symptoms: [],
+        causes: [],
+        treatment: [],
+        prevention: [],
+        organicSolutions: []
+      });
+
+    } catch (err) {
+
+      // If any error occurs (backend not running, network issue, etc.)
+      console.error('Prediction error:', err);
+
+      // Show user-friendly error message
+      setError('Backend not running? Start with `python app.py` on port 5000');
+
+    } finally {
+
+      // Stop loading animation
+      setIsAnalyzing(false);
+    }
+  };
+
+
+
+  // -------------------- HANDLE FILE SELECTION --------------------
+
+  // Runs when user selects image using file input
+  const handleFileSelect = (e) => {
+
+    const file = e.target.files[0];
+
+    // Check if file exists and is an image
+    if (file && file.type.startsWith('image/')) {
+
+      // Store file in state
+      setSelectedImage(file);
+
+      // Clear previous error and diagnosis
+      setError(null);
+      setDiagnosis(null);
+
+      // Create FileReader to generate preview
+      const reader = new FileReader();
+
+      // When file reading finishes
+      reader.onloadend = () => {
+        setImagePreview(reader.result);  // Save preview image
+      };
+
+      // Convert image file to base64 string
+      reader.readAsDataURL(file);
+    }
+  };
+
+
+
+  // -------------------- DRAG & DROP SUPPORT --------------------
+
+  // Runs when image is dropped into upload zone
+  const handleDrop = (e) => {
+
+    // Prevent browser default behavior
+    e.preventDefault();
+
+    const file = e.dataTransfer.files[0];
+
+    if (file && file.type.startsWith('image/')) {
+
+      setSelectedImage(file);
+      setError(null);
+      setDiagnosis(null);
+
+      const reader = new FileReader();
+
+      reader.onloadend = () => {
+        setImagePreview(reader.result);
+      };
+
+      reader.readAsDataURL(file);
+    }
+  };
+
+  // Prevent default behavior during drag over
+  const handleDragOver = (e) => {
+    e.preventDefault();
+  };
+
+
+
+  // -------------------- CLEAR IMAGE FUNCTION --------------------
+
+  // Clears selected image and resets UI
+  const clearImage = () => {
+
+    setSelectedImage(null);
+    setImagePreview(null);
+    setDiagnosis(null);
+    setError(null);
+
+    // Reset file input field
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+
+
+  // -------------------- UI SECTION (JSX) --------------------
+
+  return (
+    <div>
+
+      {/* Upload Section */}
+      {!imagePreview ? (
+
+        // Show upload area if no image selected
+        <div
+          onDrop={handleDrop}
+          onDragOver={handleDragOver}
+          onClick={() => fileInputRef.current?.click()}
+        >
+          <Upload />
+          <p>Upload Plant Image</p>
+
+          {/* Hidden file input */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/jpeg,image/jpg,image/png"
+            onChange={handleFileSelect}
+            style={{ display: 'none' }}
+          />
+        </div>
+
+      ) : (
+
+        // Show image preview if selected
+        <div>
+          <button onClick={clearImage}>X</button>
+          <img src={imagePreview} alt="Plant Preview" />
+        </div>
+      )}
+
+
+      {/* Analyze Button */}
+      {imagePreview && !diagnosis && (
+        <button onClick={analyzeImage} disabled={isAnalyzing}>
+          {isAnalyzing ? (
+            <>
+              <Loader2 />
+              Analyzing...
+            </>
+          ) : (
+            <>
+              <Leaf />
+              Diagnose Plant Disease
+            </>
+          )}
+        </button>
+      )}
+
+
+      {/* Error Message */}
+      {error && (
+        <div>
+          <AlertTriangle />
+          <p>{error}</p>
+        </div>
+      )}
+
+
+      {/* Diagnosis Result */}
+      {diagnosis && (
+        <div>
+
+          <h2>Diagnosis Complete</h2>
+
+          {/* Show predicted disease */}
+          <h3>{diagnosis.disease}</h3>
+
+          {/* Show confidence percentage */}
+          <p>
+            Confidence: {(diagnosis.confidence * 100).toFixed(1)}%
+          </p>
+
+          {/* Show AI reasoning */}
+          {diagnosis.reasoning && (
+            <p>{diagnosis.reasoning}</p>
+          )}
+
+          {/* Button to analyze another image */}
+          <button onClick={clearImage}>
+            <Upload />
+            Analyze Another Plant
+          </button>
+        </div>
+      )}
+
+    </div>
+  );
+};
+
+// Export component
+export default PlantDiseaseDetector;
