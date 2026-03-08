@@ -56,7 +56,8 @@ python 3.11
     ```bash
       cd backend
     ```
-6. ```bash
+6.now type these commands in bash
+   ```bash
    py -3.11 -m venv tf_env  
    tf_env/Scripts/activate
    tf_env/Scripts/python -m pip install tensorflow==2.19.0 flask flask-cors pillow numpy
@@ -66,5 +67,7 @@ python 3.11
      tf_env/Scripts/python app.py 
    ```
 8.In power shell go to frontendReact folder 
-  type:- npm install
+  ```bash 
+        npm install
         npm run dev
+  ```
