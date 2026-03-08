@@ -41,7 +41,7 @@ A web application that uses machine learning to detect and analyze plant disease
 ## Installation
 
 ### Prerequisites
-1.download  model weights  from here :- https://drive.google.com/drive/folders/1bdXyhlfchsO4dsmutApotKCXnNO77XXu?usp=sharing
+1. download  model weights  from here :- https://drive.google.com/drive/folders/1bdXyhlfchsO4dsmutApotKCXnNO77XXu?usp=sharing
 2. python 3.11
 
 ### Steps
