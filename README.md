@@ -53,9 +53,9 @@ python 3.11
 2. make model folder in backend folder
 3. add downloaded model weights file
 4. Navigate to the backend folder
-  ```bash
-    cd backend
-  ```
+    ```bash
+      cd backend
+    ```
 6. ```bash
    py -3.11 -m venv tf_env  
    tf_env/Scripts/activate
@@ -65,6 +65,6 @@ python 3.11
    ```bash
      tf_env/Scripts/python app.py 
    ```
-6.In power shell go to frontendReact folder 
+8.In power shell go to frontendReact folder 
   type:- npm install
         npm run dev
