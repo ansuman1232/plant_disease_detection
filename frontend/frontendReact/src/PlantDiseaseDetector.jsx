@@ -31,14 +31,14 @@ const analyzeImage = async () => {
   setError(null);
   
   try {
-    // Create FormData for backend file upload
+   
     const formData = new FormData();
     formData.append('image', selectedImage);
     
-    // Call YOUR Flask backend
+
     const response = await fetch('http://localhost:5000/predict', {
       method: 'POST',
-      body: formData  // Flask expects FormData
+      body: formData  
     });
     
     if (!response.ok) {
@@ -47,25 +47,26 @@ const analyzeImage = async () => {
     
     const result = await response.json();
     
-    // Convert model class names (AppleBlackRot → Apple Black Rot)
+
     let diseaseInfoKey = result.disease;
     if (result.disease.includes('_')) {
       diseaseInfoKey = result.disease.replace(/_/g, ' ');
     }
     
 
-    
-    // Set diagnosis for your UI
-  setDiagnosis({
+
+setDiagnosis({
   disease: result.disease,
   confidence: result.confidence,
   plantType: result.plantType || 'Unknown',
   affectedArea: result.affectedArea || 'leaves',
   reasoning: result.reasoning,
 
-  symptoms: [],
+ 
+  symptoms: result.symptoms || [], 
+  treatment: result.treatment || [], 
+  
   causes: [],
-  treatment: [],
   prevention: [],
   organicSolutions: []
 });
@@ -584,7 +585,83 @@ const handleFileSelect = (e) => {
               </div>
             )}
 
-           
+             {/* 4. Dynamic Symptoms & Treatment Section */}
+            <div style={{ 
+              display: 'grid', 
+              gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', 
+              gap: '2rem',
+              marginBottom: '3rem' 
+            }}>
+              
+              {/* SYMPTOMS LIST */}
+              <div style={{ 
+                background: 'rgba(251, 191, 36, 0.1)', 
+                borderLeft: '4px solid #fbbf24',
+                borderRadius: '16px',
+                padding: '1.5rem',
+                backdropFilter: 'blur(10px)'
+              }}>
+                <h3 style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '0.8rem', 
+                  fontSize: '1.4rem', 
+                  marginBottom: '1rem', 
+                  color: '#fbbf24',
+                  marginTop: 0
+                }}>
+                  <AlertTriangle size={24} /> Symptoms
+                </h3>
+                <ul style={{ paddingLeft: '1.2rem', margin: 0, color: '#fcd34d' }}>
+                  {diagnosis.symptoms && diagnosis.symptoms.length > 0 ? (
+                    diagnosis.symptoms.map((item, index) => (
+                      <li key={index} style={{ marginBottom: '0.8rem', lineHeight: '1.6' }}>
+                        {item}
+                      </li>
+                    ))
+                  ) : (
+                    <li style={{ opacity: 0.7, listStyle: 'none' }}>No symptoms detailed.</li>
+                  )}
+                </ul>
+              </div>
+
+              {/* TREATMENT LIST */}
+              <div style={{ 
+                background: 'rgba(96, 165, 250, 0.1)', 
+                borderLeft: '4px solid #60a5fa',
+                borderRadius: '16px',
+                padding: '1.5rem',
+                backdropFilter: 'blur(10px)'
+              }}>
+                <h3 style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '0.8rem', 
+                  fontSize: '1.4rem', 
+                  marginBottom: '1rem', 
+                  color: '#60a5fa',
+                  marginTop: 0
+                }}>
+                  <Sun size={24} /> Treatment
+                </h3>
+                <ul style={{ paddingLeft: '1.2rem', margin: 0, color: '#93c5fd' }}>
+                  {diagnosis.treatment && diagnosis.treatment.length > 0 ? (
+                    diagnosis.treatment.map((item, index) => (
+                      <li key={index} style={{ marginBottom: '0.8rem', lineHeight: '1.6' }}>
+                        {item}
+                      </li>
+                    ))
+                  ) : (
+                    <li style={{ opacity: 0.7, listStyle: 'none' }}>No treatment detailed.</li>
+                  )}
+                </ul>
+              </div>
+            </div>
+
+
+
+
+
 
             {/* Action Buttons */}
             <div style={{
